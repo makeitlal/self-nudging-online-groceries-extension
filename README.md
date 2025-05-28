@@ -1,1 +1,1 @@
-# Self-nudging-Online-Groceries-Browser-Extension
+# Self-nudging Online Groceries Browser Extension
