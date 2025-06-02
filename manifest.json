@@ -1,0 +1,21 @@
+{
+    "manifest_version": 3,
+    "name": "Grocery Health Overlay",
+    "version": "1.0",
+    "description": "Apply visual overlays on unhealthy grocery items (Instacart + Target)",
+    "permissions": ["scripting", "activeTab"],
+    "host_permissions": [
+      "https://www.instacart.com/*",
+      "https://www.target.com/*"
+    ],
+    "content_scripts": [
+      {
+        "matches": [
+          "https://www.instacart.com/*",
+          "https://www.target.com/*"
+        ],
+        "js": ["content.js"],
+        "run_at": "document_idle"
+      }
+    ]
+  }
