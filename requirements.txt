@@ -3,10 +3,8 @@ uvicorn
 torch
 transformers
 pillow
-json
 PIL
 torchvision
-os
 pydantic
 tempfile
 requests
