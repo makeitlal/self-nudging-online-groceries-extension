@@ -3,9 +3,7 @@ uvicorn
 torch
 transformers
 pillow
-PIL
 torchvision
 pydantic
-tempfile
 requests
 gdown
