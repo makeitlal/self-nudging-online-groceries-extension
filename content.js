@@ -1,109 +1,76 @@
-// content.js
-// const unhealthyKeywords = ["chips", "coke", "cola", "soda", "candy", "cookie", "ice cream", "pizza"];
-const unhealthyCategories = new Set([
-  "WHO NPM Category 1",
-  "WHO NPM Category 2",
-  "WHO NPM Category 3",
-  "WHO NPM Category 4a",
-  "WHO NPM Category 4c",
-  "WHO NPM Category 5"
-]);
+// const overlayedImages = new WeakSet();
+const predictionCache = new Map(); // imageURLs
 
-const parsers = {
-  "instacart.com": {
-    getProductCards: () => document.querySelectorAll('div[aria-label="Product"][role="group"]'),
-    getText: card => {
-      const textEl = card.querySelector('div.e-147kl2c');
-      return textEl ? textEl.innerText : "";
-    },
-    getImage: card => card.querySelector("img"),
-  },
-  "target.com": {
-    getProductCards: () => document.querySelectorAll('[data-test^="item-card-"]'),
-    getText: card => {
-      const textEl = card.querySelector('[data-test="product-title-sm"]');
-      return textEl ? textEl.innerText : "";
-    },
-    getImage: card => card.querySelector("img"),
+async function classifyImage(imgEl) {
+  const imageUrl = imgEl.src;
+
+  // Skip if already processed or invalid
+  if (!imageUrl) return;
+
+  // Check cache
+  if (predictionCache.has(imageUrl)) {
+    const cachedPrediction = predictionCache.get(imageUrl);
+    console.log("Using cached prediction for", imageUrl, cachedPrediction);
+
+    if (cachedPrediction.score < 0.5) {
+      applyOverlayImage(imgEl);
+    }
+
+    // overlayedImages.add(imgEl);
+    return;
   }
-};
 
-function isUnhealthy(text) {
-  return unhealthyKeywords.some(keyword => text.toLowerCase().includes(keyword));
-}
-async function classifyProduct(title, imageUrl) {
-  const payload = { title: title, image_url: imageUrl };
+  const payload = { image_url: imageUrl };
   console.log("Sending payload:", payload);
 
-  const response = await fetch("http://localhost:5000/predict", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title: title, image_url: imageUrl })
-  });
+  try {
+    const response = await fetch("https://makeitlal-grocery-store-classifier.hf.space/predict", {
+    // const response = await fetch("http://localhost:5000/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
 
-  if (!response.ok) {
-    console.error("API error:", await response.text());
-    return null;
+    if (!response.ok) {
+      console.error("API error:", await response.text());
+      return;
+    }
+
+    const prediction = await response.json();
+    console.log("Prediction result:", prediction);
+
+    // Cache the prediction result
+    predictionCache.set(imageUrl, prediction);
+
+    if (prediction.score < 0.5) {
+      applyOverlayImage(imgEl);
+    }
+
+    // overlayedImages.add(imgEl);
+  } catch (err) {
+    console.error("Fetch error:", err);
   }
-
-  const data = await response.json();
-
-  return data; // { label, score, [unhealthy] if you implemented it on server }
 }
 
 function applyOverlayImage(image) {
-  if (image && !image.dataset.overlayApplied) {
-    // image.style.filter = "contrast(0.5) grayscale(0.5)";
-    image.style.filter = "opacity(0.3)"
-    image.style.transition = "filter 0.5s ease";
-    // image.style.border = "2px solid red";
-    image.dataset.overlayApplied = "true";
-  }
+  image.style.filter = "opacity(0.3)";
+  image.style.transition = "filter 0.5s ease";
 }
 
-function applyOverlayCard(card) {
-  card.style.opacity = "0.2";
-  card.style.transition = "opacity 0.5s ease";
-  // card.style.border = "2px solid red";
-}
-
-
-async function scanAndOverlay() {
-  const domain = window.location.hostname;
-  const site = Object.keys(parsers).find(key => domain.includes(key));
-  if (!site) return;
-
-  const parser = parsers[site];
-  const cards = parser.getProductCards();
-
-  const promises = Array.from(cards).map(async (card) => {
-    const title = parser.getText(card) || "";
-    if (!title) return;
-
-    const imgEl = parser.getImage(card);
-    const imageUrl = imgEl.src;
-
-    const prediction = await classifyProduct(title, imageUrl);
-    if (!prediction) return;
-
-    if (unhealthyCategories.has(prediction.label) && prediction.score > 0.8) {
-      applyOverlayCard(card);
-    }
-  });
-
+async function scanAllImages() {
+  const allImages = document.querySelectorAll("img");
+  const promises = Array.from(allImages).map(img => classifyImage(img));
   await Promise.all(promises);
 }
 
+scanAllImages();
 
-
-scanAndOverlay();
-
-// Dynamic updates for scrolling pages
+// Handle dynamic content and scrolling
 let scrollTimeout = null;
 window.addEventListener("scroll", () => {
   clearTimeout(scrollTimeout);
-  scrollTimeout = setTimeout(scanAndOverlay, 300);
+  scrollTimeout = setTimeout(scanAllImages, 300);
 });
 
-// Periodic rescan (in case of infinite scroll)
-setInterval(scanAndOverlay, 50000);
+
+// setInterval(scanAllImages, 50000); // Optional: refresh every 50s
