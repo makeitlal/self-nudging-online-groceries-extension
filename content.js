@@ -24,7 +24,7 @@ async function classifyImage(imgEl) {
   console.log("Sending payload:", payload);
 
   try {
-    const response = await fetch("https://makeitlal-grocery-store-classifier.hf.space/predict", {
+    const response = await fetch("https://grocery-extension-group-grocery-store-classifier.hf.space/predict", {
     // const response = await fetch("http://localhost:5000/predict", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
